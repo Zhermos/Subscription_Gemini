@@ -131,7 +131,7 @@ function renderMembers() {
             </div>
 
             <div class="flex items-center justify-between pt-1.5 border-t border-zinc-800/60 text-[11px]">
-                <span class="text-zinc-500 text-[10px] sm:text-[11px]">${CONFIG.amountPerPerson} บ.</span>
+                <span class="text-zinc-500 text-[10px] sm:text-[11px]">${member.amount || CONFIG.amountPerPerson} บ.</span>
                 ${
                     isPaid
                         ? `<button onclick="event.stopPropagation(); viewSlip('${member.id}')" class="text-[10px] sm:text-[11px] text-zinc-400 hover:text-white underline">
@@ -188,9 +188,18 @@ function renderMemberSelectButtons() {
 
 function selectMember(memberId) {
     state.selectedMemberId = memberId;
+    const member = CONFIG.members.find(m => m.id === memberId);
+    const amount = member ? (member.amount || CONFIG.amountPerPerson) : CONFIG.amountPerPerson;
+
+    // Update payment amount text
+    const amountEl = document.getElementById("qrPayAmount");
+    if (amountEl) {
+        amountEl.textContent = Number(amount).toLocaleString();
+    }
+
     renderMembers();
     renderMemberSelectButtons();
-    generatePromptPayQr(CONFIG.receiver.promptpayNumber, CONFIG.amountPerPerson);
+    generatePromptPayQr(CONFIG.receiver.promptpayNumber, amount);
 }
 
 // 5. PromptPay / SCB My QR Code Display
@@ -403,6 +412,8 @@ async function verifySlipData(qrData, imageBase64) {
     // A. Backend API Call
     if (CONFIG.backendApiUrl && CONFIG.backendApiUrl.trim() !== "") {
         try {
+            const memberExpectedAmount = selectedMember ? (selectedMember.amount || CONFIG.amountPerPerson) : CONFIG.amountPerPerson;
+
             const response = await fetch(CONFIG.backendApiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -412,7 +423,7 @@ async function verifySlipData(qrData, imageBase64) {
                     monthKey: state.currentMonthKey,
                     memberId: state.selectedMemberId,
                     memberName: memberName,
-                    expectedAmount: CONFIG.amountPerPerson,
+                    expectedAmount: memberExpectedAmount,
                     imageBase64: imageBase64
                 })
             });
@@ -427,7 +438,7 @@ async function verifySlipData(qrData, imageBase64) {
 
             handleVerificationSuccess({
                 memberId: state.selectedMemberId,
-                amount: result.data.amount || CONFIG.amountPerPerson,
+                amount: result.data.amount || memberExpectedAmount,
                 time: result.data.time || new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
                 transRef: result.data.transRef || "REF-" + Date.now(),
                 slipImage: imageBase64
@@ -458,7 +469,7 @@ async function verifySlipData(qrData, imageBase64) {
 
             handleVerificationSuccess({
                 memberId: state.selectedMemberId,
-                amount: CONFIG.amountPerPerson,
+                amount: selectedMember ? (selectedMember.amount || CONFIG.amountPerPerson) : CONFIG.amountPerPerson,
                 time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
                 transRef: dummyRef,
                 slipImage: imageBase64

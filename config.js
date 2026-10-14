@@ -16,22 +16,28 @@ const CONFIG = {
         customQrImage: "scb-qr.png" // รูปมายคิวอาร์ SCB ที่แคปมา
     },
 
-    // 3. รายชื่อสมาชิก
+    // 3. รายชื่อสมาชิก (กำหนดหน้าที่และยอดของแต่ละคน)
     members: [
         {
             id: "member-1",
             name: "ปุน",
             nickname: "ปุน",
+            isHost: true, // คนจ่ายบิล Google
+            amount: 189   // ยอดตัดบัตรจริงกับ Google
         },
         {
             id: "member-2",
             name: "ธี",
             nickname: "ธี",
+            isHost: false,
+            amount: 63    // ยอดหารที่ต้องโอนให้ปุน
         },
         {
             id: "member-3",
             name: "พีท",
             nickname: "พีท",
+            isHost: false,
+            amount: 63    // ยอดหารที่ต้องโอนให้ปุน
         }
     ],
 

@@ -19,44 +19,38 @@
  */
 
 // ==========================================
-// 1. GET Request: ดึงสถานะการจ่ายเงินของเดือนนั้น
+// 1. GET Request: ดึงสถานะการจ่ายเงิน
 // ==========================================
 function doGet(e) {
   try {
-    const params = e.parameter;
-    const action = params.action;
-    const monthKey = params.monthKey; // เช่น "2024-10"
+    const sheet = getOrCreateSheet();
+    const data = sheet.getDataRange().getValues();
+    const payments = {};
 
-    if (action === "getPayments" && monthKey) {
-      const sheet = getOrCreateSheet();
-      const data = sheet.getDataRange().getValues();
-      const payments = {};
+    // วนลูปอ่านข้อมูลใน Sheet (แถวที่ 1 เป็น Header)
+    // อ่านจากแถวล่าสุด เพื่อให้ได้สถานะล่าสุดของสมาชิกแต่ละคน
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const memberId = String(row[2] || "").trim();
+      const amount = row[4];
+      const transRef = String(row[5] || "").trim();
+      const status = String(row[7] || "").trim().toUpperCase();
+      const time = row[0];
 
-      // วนลูปอ่านข้อมูลใน Sheet (แถวที่ 1 เป็น Header)
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        const rowMonth = row[1];    // MonthKey
-        const memberId = row[2];    // MemberID
-        const amount = row[4];      // Amount
-        const transRef = row[5];    // TransRef
-        const status = row[7];      // Status (APPROVED)
-        const time = row[0];        // Timestamp
-
-        if (rowMonth === monthKey && status === "APPROVED") {
-          payments[memberId] = {
-            paid: true,
-            amount: amount,
-            time: Utilities.formatDate(new Date(time), "Asia/Bangkok", "dd/MM/yyyy HH:mm"),
-            transRef: transRef,
-            slipImage: row[8] || "" // รูปภาพสลิป
-          };
-        }
+      if (memberId && status === "APPROVED") {
+        payments[memberId] = {
+          paid: true,
+          amount: amount,
+          time: (time instanceof Date) 
+                  ? Utilities.formatDate(time, "Asia/Bangkok", "dd/MM/yyyy HH:mm") 
+                  : String(time),
+          transRef: transRef,
+          slipImage: row[8] || "" // รูปภาพสลิป
+        };
       }
-
-      return createJsonResponse({ success: true, payments: payments });
     }
 
-    return createJsonResponse({ success: false, message: "Invalid action or parameters" });
+    return createJsonResponse({ success: true, payments: payments });
   } catch (err) {
     return createJsonResponse({ success: false, error: err.toString() });
   }
@@ -91,7 +85,7 @@ function doPost(e) {
       const now = new Date();
       sheet.appendRow([
         now,                    // Timestamp
-        monthKey,               // MonthKey (เช่น 2024-10)
+        "'" + String(monthKey), // MonthKey (บังคับให้เป็น Text ไม่ให้ Sheet แปลงเป็น Date)
         memberId,               // Member ID
         memberName,             // Member Name
         expectedAmount,         // Amount (63 บาท)
