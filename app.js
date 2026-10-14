@@ -197,6 +197,17 @@ function selectMember(memberId) {
         amountEl.textContent = Number(amount).toLocaleString();
     }
 
+    // Dynamic dropzone instructions (Host uses TrueMoney receipt, Friends use bank slips)
+    const dropTitle = document.getElementById("dropzoneTitle");
+    const dropDesc = document.getElementById("dropzoneDesc");
+    if (member && member.isHost) {
+        if (dropTitle) dropTitle.textContent = "แนบใบเสร็จ TrueMoney / Google Play (189 บ.)";
+        if (dropDesc) dropDesc.textContent = "บันทึกได้ทันที ไม่ต้องมี QR Code";
+    } else {
+        if (dropTitle) dropTitle.textContent = "คลิกเพื่อเลือกไฟล์สลิปธนาคาร (63 บ.)";
+        if (dropDesc) dropDesc.textContent = "ระบบสแกน QR Code ตรวจสอบอัตโนมัติ";
+    }
+
     renderMembers();
     renderMemberSelectButtons();
     generatePromptPayQr(CONFIG.receiver.promptpayNumber, amount);
@@ -338,6 +349,16 @@ function processSlipImageFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const imageBase64 = e.target.result;
+        const selectedMember = CONFIG.members.find(m => m.id === state.selectedMemberId);
+
+        // กรณีเป็นคนจ่ายบิลหลัก (ปุน): บันทึกใบเสร็จ TrueMoney ได้ทันทีโดยไม่ต้องสแกน QR Code!
+        if (selectedMember && selectedMember.isHost) {
+            showVerifyStep("กำลังบันทึกใบเสร็จ...", "บันทึกหลักฐานการตัดเงิน Google Play / TrueMoney");
+            verifySlipData("TMN-" + Date.now(), imageBase64);
+            return;
+        }
+
+        // กรณีเป็นเพื่อน (ธี, พีท): สแกนหา QR Code สลิปธนาคารตามปกติ
         const img = new Image();
         img.onload = () => {
             scanQrFromImage(img, imageBase64);
