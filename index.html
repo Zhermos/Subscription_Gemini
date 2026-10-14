@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Tracker</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Plus Jakarta Sans', '-apple-system', 'sans-serif'],
+                        mono: ['SFMono-Regular', 'Menlo', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QR Code Generator & jsQR Reader -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body {
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+        .minimal-border {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .minimal-card {
+            background-color: #121214;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 min-h-screen font-sans selection:bg-zinc-800 selection:text-white pb-20">
+
+    <div class="max-w-2xl mx-auto px-4 pt-10">
+
+        <!-- Top Header & Status -->
+        <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-zinc-800/80 mb-8">
+            <div>
+                <h1 class="text-xl font-semibold tracking-tight text-white flex items-center gap-2" id="headerServiceTag">
+                    Subscription
+                </h1>
+                <p class="text-xs text-zinc-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span>รอบบิล <span id="currentMonthYear" class="text-zinc-200 font-medium">-</span></span>
+                    <span>·</span>
+                    <span>ยอดรวม <span id="totalAmountText">0</span> บาท</span>
+                    <span>·</span>
+                    <span class="text-amber-400 font-medium" id="dueDateHeaderBadge">โอนก่อนวันที่ 13</span>
+                </p>
+            </div>
+
+            <!-- Status Indicator -->
+            <div class="flex items-center gap-2 self-start sm:self-auto bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-xs">
+                <span class="w-2 h-2 rounded-full" id="statusBadgeOverall"></span>
+                <span class="text-zinc-400">ชำระแล้ว:</span>
+                <span class="font-medium text-white" id="paymentProgressText">0 / 3</span>
+            </div>
+        </header>
+
+        <!-- Members List -->
+        <section class="mb-8">
+            <div class="flex items-center justify-between text-xs text-zinc-400 mb-3 px-1">
+                <span>สมาชิก</span>
+                <button id="refreshBtn" class="hover:text-zinc-200 transition-colors flex items-center gap-1">
+                    <i data-lucide="rotate-cw" class="w-3 h-3" id="refreshIcon"></i>
+                    รีเฟรช
+                </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 sm:gap-3" id="membersContainer">
+                <!-- Populated by app.js -->
+            </div>
+        </section>
+
+        <!-- Payment & Upload Card -->
+        <section class="minimal-card rounded-xl p-5 sm:p-6 mb-8">
+            <div class="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                    <h2 class="text-sm font-semibold text-white">ชำระเงินและส่งสลิป</h2>
+                    <p class="text-xs text-zinc-400 mt-0.5">ระบบจะสแกน QR Code ตรวจสอบความถูกต้องโดยอัตโนมัติ</p>
+                </div>
+                <div class="self-start sm:self-auto inline-flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>โอนก่อนวันที่ <span id="dueDayNoticeText">13</span> ของเดือน</span>
+                </div>
+            </div>
+
+            <!-- 1. Member Selector Tabs (Clean Segmented Control) -->
+            <div class="mb-6">
+                <label class="block text-[11px] font-medium text-zinc-400 mb-2">เลือกผู้จ่าย</label>
+                <div class="grid grid-cols-3 gap-1.5 p-1 bg-zinc-900 rounded-lg border border-zinc-800/80" id="memberSelectButtons">
+                    <!-- Populated by app.js -->
+                </div>
+            </div>
+
+            <!-- 2. Payment Info & Dropzone Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- PromptPay Box -->
+                <div class="bg-zinc-900/60 border border-zinc-800/80 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                    <div class="bg-white p-2 rounded-md mb-3">
+                        <div id="promptpayQrCode" class="min-w-[128px] min-h-[128px] max-w-[160px] flex items-center justify-center"></div>
+                    </div>
+                    <div class="text-lg font-semibold text-white tracking-tight">
+                        <span id="qrPayAmount">0</span> <span class="text-xs font-normal text-zinc-400">บาท</span>
+                    </div>
+                    <div class="text-xs text-zinc-400 mt-1 flex items-center gap-1.5">
+                        <span id="receiverNumberText">-</span>
+                        <button id="copyNumberBtn" class="text-zinc-300 hover:text-white underline text-[11px]">
+                            คัดลอก
+                        </button>
+                    </div>
+                    <div class="text-[11px] text-zinc-500 mt-0.5" id="receiverNameText">-</div>
+                </div>
+
+                <!-- Slip Upload Dropzone -->
+                <div class="flex flex-col">
+                    <div id="dropzone" class="flex-1 border border-dashed border-zinc-700/80 hover:border-zinc-500 bg-zinc-900/30 hover:bg-zinc-900/60 rounded-lg p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors relative min-h-[170px]">
+                        <input type="file" id="slipFileInput" accept="image/*" class="hidden">
+                        
+                        <i data-lucide="upload" class="w-5 h-5 text-zinc-400 mb-2"></i>
+                        <span class="text-xs font-medium text-zinc-200">
+                            คลิกเพื่อเลือกไฟล์สลิป
+                        </span>
+                        <span class="text-[11px] text-zinc-500 mt-1">
+                            หรือลากไฟล์มาวาง / กด Ctrl + V
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Processing / Status Box -->
+            <div id="verifyStatusBox" class="hidden mt-4 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-xs flex items-center gap-3">
+                <div id="verifySpinner" class="w-4 h-4 border-2 border-zinc-400 border-t-white rounded-full animate-spin shrink-0"></div>
+                <div>
+                    <div id="verifyStepTitle" class="font-medium text-white">กำลังสแกนสลิป...</div>
+                    <div id="verifyStepDesc" class="text-zinc-400 text-[11px]">ค้นหา QR Code และตรวจยอดเงิน</div>
+                </div>
+            </div>
+
+            <!-- Error Box -->
+            <div id="verifyErrorBox" class="hidden mt-4 bg-red-950/20 border border-red-900/40 text-red-300 rounded-lg p-3 text-xs flex items-start gap-2.5">
+                <i data-lucide="circle-alert" class="w-4 h-4 text-red-400 shrink-0 mt-0.5"></i>
+                <div>
+                    <div class="font-medium text-red-200" id="verifyErrorTitle">ตรวจสอบไม่ผ่าน</div>
+                    <div class="text-red-300/80 text-[11px] mt-0.5" id="verifyErrorDesc"></div>
+                </div>
+            </div>
+
+            <!-- Success Box -->
+            <div id="verifySuccessBox" class="hidden mt-4 bg-emerald-950/20 border border-emerald-900/40 text-emerald-300 rounded-lg p-3 text-xs flex items-start gap-2.5">
+                <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                <div>
+                    <div class="font-medium text-emerald-200" id="verifySuccessTitle">ตรวจสอบสำเร็จ</div>
+                    <div class="text-emerald-300/80 text-[11px] mt-0.5" id="verifySuccessDesc">บันทึกสถานะเรียบร้อยแล้ว</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-[11px] text-zinc-500">
+            <span id="demoModeIndicator"></span>
+        </footer>
+
+    </div>
+
+    <!-- Slip Modal (Minimal) -->
+    <div id="slipModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#121214] border border-zinc-800 rounded-xl max-w-sm w-full p-4 relative">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800 mb-3">
+                <span class="text-xs font-medium text-zinc-300">สลิปการโอน</span>
+                <button id="closeSlipModal" class="text-zinc-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="rounded-lg overflow-hidden bg-black border border-zinc-800 mb-3 flex items-center justify-center min-h-[200px]">
+                <img id="modalSlipImage" src="" alt="Slip" class="w-full max-h-80 object-contain">
+            </div>
+
+            <div class="text-[11px] text-zinc-400 space-y-1" id="modalSlipMeta"></div>
+        </div>
+    </div>
+
+    <!-- Hidden Canvas for Image Processing -->
+    <canvas id="qrScanCanvas" class="hidden"></canvas>
+
+    <!-- App Scripts -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
